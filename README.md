@@ -150,7 +150,7 @@ on this bug, but it does not seem to be high priority for a fix.
 ### `CallingConv.h`
 
 The file `$LLVM/include/llvm/IR/CallingConv.h` assigns integer codes for
-the various calling conventions.  In **LLVM** 14.0.x, the last number assigned
+the various calling conventions.  In **LLVM** 16.0.x, the last number assigned
 is `20` (for the `SwiftTail` convention), so we use `21` for **JWA**.
 Add the following code to the file just before the first target-specific
 code (which will be `64`).
@@ -227,7 +227,7 @@ The file `$LLVM/lib/Target/X86/X86CallingConv.td` describes the calling
 conventions for the *x86* and *x86-64* (aka *amd64*) architectures
 using **LLVM**'s [**TabgeGen**](https://llvm.org/docs/TableGen/) language.
 We need to add several chunks of code to the file.  I added the first
-just before the definition for `RetCC_X86_32`.
+just before the `Return Value Calling Conventions` section.
 
 ```
 // The JWA calling convention for x86_64. Note that this is
@@ -429,15 +429,17 @@ bool RetCC_AArch64_JWA(unsigned ValNo, MVT ValVT, MVT LocVT,
 
 #### `AArch64FastISel.cpp`
 
-In the method `AArch64FastISel::CCAssignFnForCall`, we add the following statement
-before the final return:
+In the file `$LLVM/lib/Target/AArch64/AArch64FastISel.cpp`, we make
+the following changes.
+In the method `AArch64FastISel::CCAssignFnForCall`, add the
+following statement before the final return:
 
 ``` c++
   if (CC == CallingConv::JWA)
     return CC_AArch64_JWA;
 ```
 
-In the function `AArch64FastISel::selectRet`, replace the statement
+And in the function `AArch64FastISel::selectRet`, replace the statement
 ``` c++
     CCAssignFn *RetCC = CC == CallingConv::WebKit_JS ? RetCC_AArch64_WebKit_JS
                                                      : RetCC_AArch64_AAPCS;
@@ -451,8 +453,12 @@ with
 
 #### `AArch64RegisterInfo.cpp`
 
-In the method `AArch64RegisterInfo::getCalleeSavedRegs`, add the following test
-following the similar code for the `GHC` convention.
+In the file `$LLVM/lib/Target/AArch64/AArch64RegisterInfo.cpp`, we make
+several additions.
+
+In the method `AArch64RegisterInfo::getCalleeSavedRegs`,
+add the following test following the similar code for the `GHC` convention.
+
 ``` c++
   if (MF->getFunction().getCallingConv() == CallingConv::JWA)
     // no callee-saves for JWA
@@ -526,7 +532,7 @@ This change is not necessary for LLVM 12+.
 
 #### `AArch64FrameLowering.cpp`
 
-We add the following statement
+In `$LLVM/lib/Target/AArch64/AArch64FrameLowering.cpp`, we add the following statement
 
 ``` c++
   // All calls are tail calls in JWA calling conv, and functions have no

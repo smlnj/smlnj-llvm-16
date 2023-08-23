@@ -156,6 +156,7 @@ enum Kind {
   kw_anyregcc,
   kw_swiftcc,
   kw_swifttailcc,
+  kw_jwacc,
   kw_preserve_mostcc,
   kw_preserve_allcc,
   kw_ghccc,

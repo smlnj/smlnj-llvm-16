@@ -1465,6 +1465,11 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
     return;
 
+  // All calls are tail calls in JWA calling conv, and functions have no
+  // prologue/epilogue.
+  if (MF.getFunction().getCallingConv() == CallingConv::JWA)
+    return;
+
   // Set tagged base pointer to the requested stack slot.
   // Ideally it should match SP value after prologue.
   std::optional<int> TBPI = AFI->getTaggedBasePointerIndex();
@@ -1953,6 +1958,11 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // All calls are tail calls in GHC calling conv, and functions have no
   // prologue/epilogue.
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
+    return;
+
+  // All calls are tail calls in JWA calling conv, and functions have no
+  // prologue/epilogue.
+  if (MF.getFunction().getCallingConv() == CallingConv::JWA)
     return;
 
   // How much of the stack used by incoming arguments this function is expected
@@ -2970,6 +2980,11 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   // All calls are tail calls in GHC calling conv, and functions have no
   // prologue/epilogue.
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
+    return;
+
+  // All calls are tail calls in JWA calling conv, and functions have no
+  // prologue/epilogue.
+  if (MF.getFunction().getCallingConv() == CallingConv::JWA)
     return;
 
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);

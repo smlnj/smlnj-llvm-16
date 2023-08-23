@@ -338,6 +338,8 @@ CCAssignFn *AArch64FastISel::CCAssignFnForCall(CallingConv::ID CC) const {
     return CC_AArch64_WebKit_JS;
   if (CC == CallingConv::GHC)
     return CC_AArch64_GHC;
+  if (CC == CallingConv::JWA)
+    return CC_AArch64_JWA;
   if (CC == CallingConv::CFGuard_Check)
     return CC_AArch64_Win64_CFGuard_Check;
   return Subtarget->isTargetDarwin() ? CC_AArch64_DarwinPCS : CC_AArch64_AAPCS;
@@ -3819,7 +3821,8 @@ bool AArch64FastISel::selectRet(const Instruction *I) {
     SmallVector<CCValAssign, 16> ValLocs;
     CCState CCInfo(CC, F.isVarArg(), *FuncInfo.MF, ValLocs, I->getContext());
     CCAssignFn *RetCC = CC == CallingConv::WebKit_JS ? RetCC_AArch64_WebKit_JS
-                                                     : RetCC_AArch64_AAPCS;
+                      : CC == CallingConv::JWA       ? RetCC_AArch64_JWA
+                      : RetCC_AArch64_AAPCS;
     CCInfo.AnalyzeReturn(Outs, RetCC);
 
     // Only handle a single return value for now.
