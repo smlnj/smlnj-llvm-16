@@ -30,3 +30,15 @@
 *.exe
 *.out
 *.app
+
+# clangd cache
+.cache
+
+# project files
+bin
+build
+cfgc/src/cfgc
+include
+lib
+
+
