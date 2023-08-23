@@ -1,21 +1,22 @@
 #!/bin/sh
 #
-# COPYRIGHT (c) 2022 The Fellowship of SML/NJ (http://www.smlnj.org)
+# COPYRIGHT (c) 2023 The Fellowship of SML/NJ (http://www.smlnj.org)
 # All rights reserved.
 #
 # This script handles building the LLVM code generator library as part
 # of the SML/NJ installation process.  It will use available parallelism
 # and normally builds a code generator that supports just a single target.
 #
-# usage: build-llvm.sh [-h | --help] [--all-targets] [--debug]
+# usage: build-llvm.sh [options]
 #
 # options:
-#       -h | -help              -- print help message
-#       -all-targets            -- build a version of LLVM that supports all hardware targets
-#                                  that are known to SML/NJ
-#       -debug                  -- build a debug release of LLVM (WARNING: debug releases take
-#                                  much longer to build and are signficantly slower than the
-#                                  default release builds)
+#       -h | -help      -- print help message
+#       -all-targets    -- build a version of LLVM that supports all hardware targets
+#                          that are known to SML/NJ
+#       -build-cfgc     -- build the cfgc (CFG compiler) tool
+#       -debug          -- build a debug release of LLVM (WARNING: debug releases take
+#                          much longer to build and are signficantly slower than the
+#                          default release builds)
 #
 
 usage() {
@@ -136,7 +137,7 @@ cd build
 
 echo "build-llvm.sh: configuring build"
 echo "  cmake --preset=$PRESET $CMAKE_DEFS ../src"
-cmake --preset=$PRESET $CMAKE_DEFS ../src || exit 1
+cmake --preset=$PRESET $CMAKE_DEFS ../llvm || exit 1
 
 echo "build-llvm.sh: building on $NPROCS cores"
 echo "  make -j $NPROCS install"

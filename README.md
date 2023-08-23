@@ -1,9 +1,20 @@
 # LLVM with Support for JWA Calling Convention
 
-This repository is version of [**LLVM**](https://llvm.org) with support for the JWA
+This repository is a version of [**LLVM**](https://llvm.org) with support for the JWA
 calling convention.  It is meant to be used as a submodule for the development
 branch of [**Standard ML of New Jersey** (**SML/NJ**)](https://smlnj.org) and is based on **LLVM**
-version 14.0.6.
+version 16.0.6.
+
+## Removed components
+
+To reduce the size of the repository, we have removed the following unused (by SML/NJ)
+components from the **LLVM** source tree:
+
+> `benchmarks`
+> `bindings`
+> `examples`
+> `test`
+> `unittests`
 
 ## The Jump-with-Arguments Calling Convention
 
