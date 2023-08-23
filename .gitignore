@@ -41,4 +41,6 @@ cfgc/src/cfgc
 include
 lib
 
+# macOS
+.DS_Store
 

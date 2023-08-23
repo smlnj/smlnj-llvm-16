@@ -39,12 +39,6 @@ The important properties of the JWA runtime model are
 
 ## Organzation
 
-* `LICENSE` -- the **LLVM** source code license, which covers the code in the
-  `src` sub-directory.
-
-* `LLVM-VERSION` -- specifies the version of **LLVM** that this source tree is
-  derived from (which is 14.0.5).
-
 * `build-llvm.sh` -- shell script for configuring and building the LLVM tools
   and libraries.
 
@@ -56,10 +50,16 @@ The important properties of the JWA runtime model are
 
 * `cmake` -- **LLVM**'s common CMake modules; see `cmake/README.rst` for details.
 
-* `src` -- the main **LLVM** source directory.
+* `llvm` -- the main **LLVM** source directory.
 
-* `src/CMakePresets.json` -- CMake presets that customize the configuration and
+* `llvm/CMakePresets.json` -- CMake presets that customize the configuration and
   build process.  This file is **not** part of the standard LLVM sources.
+
+* `llvm/LICENSE.TXT` -- the **LLVM** source code license, which covers the code in the
+  `cmake` and `llvm` sub-directories.
+
+* `LLVM-VERSION` -- specifies the version of **LLVM** that this source tree is
+  derived from (which is 16.0.6).
 
 The `build-llvm.sh` script will produce several additional directories:
 
@@ -99,7 +99,8 @@ changes to integrate with our use of CMake.
 
 ### Pruned Sources
 
-We removed the following subdirectories from the **LLVM** source tree.
+As described above, we removed the following subdirectories from
+the **LLVM** source tree.
 
 ``` bash
 rm -rf benchmarks bindings examples test unittests
