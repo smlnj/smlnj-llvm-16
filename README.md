@@ -129,7 +129,7 @@ There is some documentation about how to specify calling conventions in
 
 ### Fixing `SelectionDAGBuilder.cpp`
 
-In Version 11.0.0 of *LLVM*, a change was made to the `SelectionDAGISel::LowerArguments`
+In Version 11.0.0 of *LLVM*, a change was made to `SelectionDAGISel::LowerArguments`
 in the `$LLVM/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp` file that
 breaks the handling of the `naked` attribute on functions with arguments
 (see commit [4dba59689d008df7be37733de4bb537b2911d3ad](https://github.com/llvm/llvm-project/commit/4dba59689d008df7be37733de4bb537b2911d3ad)).
