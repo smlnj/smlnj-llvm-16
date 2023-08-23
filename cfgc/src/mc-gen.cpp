@@ -89,7 +89,7 @@ llvm::dbgs() << "host CPU = " << llvm::sys::getHostCPUName() << "\n";
 	"",			/* features string */
 	tgtOptions,
 	llvm::Reloc::PIC_,
-	llvm::None,
+	std::optional<llvm::CodeModel::Model>(),
 	llvm::CodeGenOpt::Less));
 
     if (!tgtMachine) {
