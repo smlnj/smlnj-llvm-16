@@ -1,6 +1,6 @@
 /// \file code-buffer.hpp
 ///
-/// \copyright 2020 The Fellowship of SML/NJ (http://www.smlnj.org)
+/// \copyright 2023 The Fellowship of SML/NJ (https://smlnj.org)
 /// All rights reserved.
 ///
 /// \brief The code_buffer class wraps up the LLVM code generator state.
@@ -59,9 +59,9 @@ using lvar_map_t = std::unordered_map<LambdaVar::lvar, T *>;
 //
 using frag_kind = CFG::frag_kind;
 
-// The code_buffer class encapsulates the current state of code generation, as well
-// as information about the target architecture.  It is passed as an argument to
-// all of the `codegen` methods in the CFG representation.
+/// The code_buffer class encapsulates the current state of code generation, as well
+/// as information about the target architecture.  It is passed as an argument to
+/// all of the `codegen` methods in the CFG representation.
 //
 class code_buffer {
   public:
@@ -144,17 +144,31 @@ class code_buffer {
     void restoreSMLRegState (reg_state const & cache) { this->_regState.copyFrom (cache); }
 
   // target parameters
+
+    /// the size of a target machine word in bytes
     int wordSzInBytes () const { return this->_wordSzB; }
+
+    /// round a size (in bytes) up to the nearest multiple of the word size.
     size_t roundToWordSzInBytes (size_t nb) const
     {
         return (nb + (this->_wordSzB - 1)) & ~(this->_wordSzB - 1);
     }
+
+    /// round a size in bytes up to the number of words
+    size_t roundToWordSz (size_t nb) const
+    {
+        return ((nb + (this->_wordSzB - 1)) & ~(this->_wordSzB - 1)) / this->_wordSzB;
+    }
+
+    /// is the target a 64-bit machine?
     bool is64Bit () const { return (this->_wordSzB == 8); }
+
+    /// return a ponter to the target information struct
     target_info const *targetInfo () const { return this->_target; }
 
-  // align the allocation pointer for 64 bits on 32-bit machines.  The resulting
-  // alloc pointer points to the location of the object descriptor, so adding
-  // wordSzInBytes() should produce an 8-byte aligned address
+    /// align the allocation pointer for 64 bits on 32-bit machines.  The resulting
+    /// alloc pointer points to the location of the object descriptor, so adding
+    /// wordSzInBytes() should produce an 8-byte aligned address
     Value *alignedAllocPtr ()
     {
 	if (this->is64Bit()) {
@@ -728,24 +742,24 @@ class code_buffer {
 
   /***** Code generation *****/
 
-  // compile to an in-memory code object
+    /// compile to an in-memory code object
     std::unique_ptr<CodeObject> compile () const;
 
-  // dump assembly code to stdout
+    /// dump assembly code to stdout
     void dumpAsm () const;
 
-  // dump assembly code to a file
+    /// dump assembly code to a file
     void dumpAsm (std::string const &stem) const;
 
-  // dump machine code to an object file
+    /// dump machine code to an object file
     void dumpObj (std::string const &stem) const;
 
   /***** Debugging support *****/
 
-  // dump the current module to stderr
+    /// dump the current module to stderr
     void dump () const;
 
-  // run the LLVM verifier on the module
+    /// run the LLVM verifier on the module
     bool verify () const;
 
   private:
@@ -760,22 +774,22 @@ class code_buffer {
     lvar_map_t<CFG::frag>	_fragMap;	// pre-cluster map from labels to fragments
     lvar_map_t<Value>		_vMap;		// per-fragment map from lvars to values
 
-  // more cached types (these are internal to the code_buffer class)
+    // more cached types (these are internal to the code_buffer class)
     llvm::FunctionType *_gcFnTy; 		// type of call-gc function
     llvm::FunctionType *_raiseOverflowFnTy;	// type of raise_overflow function
 
-  // a basic block for the current cluster that will raise the Overflow exception
+    // a basic block for the current cluster that will raise the Overflow exception
     llvm::BasicBlock		*_overflowBB;
     std::vector<llvm::PHINode *> _overflowPhiNodes;
 
-  // tracking the state of the SML registers
+    // tracking the state of the SML registers
     sml_registers		_regInfo;	// target-specific register info
     reg_state			_regState;	// current register values
 
-  // target-machine properties
+    /// target-machine properties
     int64_t _wordSzB;
 
-  // cached intrinsic functions
+    // cached intrinsic functions
     mutable llvm::Function *_sadd32WO;		// @llvm.sadd.with.overflow.i32
     mutable llvm::Function *_ssub32WO;		// @llvm.ssub.with.overflow.i32
     mutable llvm::Function *_smul32WO;		// @llvm.smul.with.overflow.i32
@@ -789,19 +803,19 @@ class code_buffer {
     mutable llvm::Function *_copysign32;	// @llvm.copysign.f32
     mutable llvm::Function *_copysign64;	// @llvm.copysign.f64
 
-  // cached @llvm.read_register + meta data to access stack
+    /// cached @llvm.read_register + meta data to access stack
     llvm::Function *_readReg;
     llvm::MDNode *_spRegMD;
 
-  // helper function for getting an intrinsic when it has not yet
-  // been loaded for the current module.
-  //
+    /// helper function for getting an intrinsic when it has not yet
+    /// been loaded for the current module.
+    //
     llvm::Function *_getIntrinsic (llvm::Intrinsic::ID id, Type *ty) const;
 
-  // initialize the metadata needed to support reading the stack pointer
+    /// initialize the metadata needed to support reading the stack pointer
     void _initSPAccess ();
 
-  // utility function for loading a value from the stack
+    /// utility function for loading a value from the stack
     Value *_loadFromStack (int offset, std::string const &name)
     {
 	return this->build().CreateAlignedLoad (
@@ -811,34 +825,34 @@ class code_buffer {
 	    name);
     }
 
-  // function for loading a special register from memory
+    /// function for loading a special register from memory
     Value *_loadMemReg (sml_reg_id r);
 
-  // function for setting a special memory register
+    /// function for setting a special memory register
     void _storeMemReg (sml_reg_id r, Value *v);
 
-  // information about JWA arguments
+    /// information about JWA arguments
     struct arg_info {
-	int nExtra;	// number of extra args for special CMachine registers
-			// that are mapped to machine registers
-	int basePtr;	// == 1 if there is a base-pointer arg, 0 otherwise
-	int nUnused;	// unused args (for STD_CONT convention)
+	int nExtra;	///< number of extra args for special CMachine registers
+			///  that are mapped to machine registers
+	int basePtr;	///< == 1 if there is a base-pointer arg, 0 otherwise
+	int nUnused;	///< unused args (for STD_CONT convention)
 
 	int numArgs (int n) { return n + this->nExtra + this->basePtr + this->nUnused; }
 
     };
 
-  // get information about JWA arguments for a fragment in the current cluster
+    /// get information about JWA arguments for a fragment in the current cluster
     arg_info _getArgInfo (frag_kind kind) const;
 
-  // add the types for the "extra" parameters (plus optional base pointer) to
-  // a vector of types.
+    /// add the types for the "extra" parameters (plus optional base pointer) to
+    /// a vector of types.
     void _addExtraParamTys (std::vector<Type *> &tys, arg_info const &info) const;
 
-  // add the "extra" arguments (plus optional base pointer) to an argument vector
+    /// add the "extra" arguments (plus optional base pointer) to an argument vector
     void _addExtraArgs (Args_t &args, arg_info const &info) const;
 
-  // private constructor
+    /// private constructor
     code_buffer (struct target_info const *target);
 
 };
