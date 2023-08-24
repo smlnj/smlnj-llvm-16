@@ -34,13 +34,15 @@
 # clangd cache
 .cache
 
+# macOS
+.DS_Store
+
 # project files
 bin
 build
 cfgc/src/cfgc
+cfgc/tests/*.s
+cfgc/tests/*.o
 include
 lib
-
-# macOS
-.DS_Store
 
