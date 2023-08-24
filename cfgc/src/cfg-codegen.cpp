@@ -1,6 +1,6 @@
 ///! \file cfg-codegen.cpp
 ///
-/// \copyright 2020 The Fellowship of SML/NJ (http://www.smlnj.org)
+/// \copyright 2023 The Fellowship of SML/NJ (https://smlnj.org)
 /// All rights reserved.
 ///
 /// \brief This file holds the implementations of the `codegen` methods
@@ -378,7 +378,7 @@ namespace CFG {
 
     void RCC::codegen (code_buffer * buf)
     {
-	assert (false && "RCC not yet implemented"); /* FIXME */
+	assert (false && "RCC not yet implemented"); /* TODO */
     } // RCC::codegen
 
 

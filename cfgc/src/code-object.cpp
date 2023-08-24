@@ -6,7 +6,7 @@
  */
 
 /*
- * COPYRIGHT (c) 2021 The Fellowship of SML/NJ (http://www.smlnj.org)
+ * COPYRIGHT (c) 2023 The Fellowship of SML/NJ (https://smlnj.org)
  * All rights reserved.
  */
 
@@ -47,10 +47,12 @@ static llvm::ExitOnError exitOnErr;
 class AArch64CodeObject : public CodeObject {
   public:
     AArch64CodeObject (
-	target_info const *target,
-	std::unique_ptr<llvm::object::ObjectFile> objFile
+        target_info const *target,
+        std::unique_ptr<llvm::object::ObjectFile> objFile
     ) : CodeObject(target, std::move(objFile))
     { }
+
+    ~AArch64CodeObject () { }
 
   protected:
     bool _includeDataSect (llvm::object::SectionRef &sect);
@@ -81,14 +83,14 @@ public:
 
     void patchHi21 (uint32_t v)
     {
-	uint32_t hi21 = (v >> 11);  		// hi 21 bits of value
-	this->_w.hi21.immlo = hi21 & 3;		// low 2 bits of hi21
-	this->_w.hi21.immhi = hi21 >> 2;	// high 19 bits of hi21
+        uint32_t hi21 = (v >> 11);              // hi 21 bits of value
+        this->_w.hi21.immlo = hi21 & 3;         // low 2 bits of hi21
+        this->_w.hi21.immhi = hi21 >> 2;        // high 19 bits of hi21
     }
 
     void patchLo12 (uint32_t v)
     {
-	this->_w.lo12.imm12 = (v & 0xfff);
+        this->_w.lo12.imm12 = (v & 0xfff);
     }
 
     void patchB26 (uint32_t v)
@@ -107,46 +109,46 @@ private:
     union {
         //! raw instruction word
         uint32_t w32;
-	//! instructions with a 21-bit immediate values that represent the high
-	//! 21-bits of an offset.  (these are the "PC relative" instructions)
-	//
-	struct {
+        //! instructions with a 21-bit immediate values that represent the high
+        //! 21-bits of an offset.  (these are the "PC relative" instructions)
+        //
+        struct {
 #if defined(BYTE_ORDER_BIG)
-	    uint32_t op1 : 1;		//!< opcode bit
-	    uint32_t immlo : 2;		//!< low two bits of immediate value
-	    uint32_t op2 : 5;		//!< more opcode bits
-	    uint32_t immhi : 19;	//!< high 19 bits of immediate value
-	    uint32_t rd : 5;            //!< destination register
+            uint32_t op1 : 1;           //!< opcode bit
+            uint32_t immlo : 2;         //!< low two bits of immediate value
+            uint32_t op2 : 5;           //!< more opcode bits
+            uint32_t immhi : 19;        //!< high 19 bits of immediate value
+            uint32_t rd : 5;            //!< destination register
 #elif defined(BYTE_ORDER_LITTLE)
-	    uint32_t rd : 5;
-	    uint32_t immhi : 19;	// high 19 bits of immediate value
-	    uint32_t op2 : 5;		// more opcode bits
-	    uint32_t immlo : 2;		// low two bits of immediate value
-	    uint32_t op1 : 1;		// opcode bit
+            uint32_t rd : 5;
+            uint32_t immhi : 19;        // high 19 bits of immediate value
+            uint32_t op2 : 5;           // more opcode bits
+            uint32_t immlo : 2;         // low two bits of immediate value
+            uint32_t op1 : 1;           // opcode bit
 #else
 #  error must specify an endianess
 #endif
-	} hi21;
-	// instructions with a 12-bit immediate value that is used for the
-	// low bits of an offset.  (These include the add/sub immediate
-	// instructions that are used to compute addresses)
-	struct {
+        } hi21;
+        // instructions with a 12-bit immediate value that is used for the
+        // low bits of an offset.  (These include the add/sub immediate
+        // instructions that are used to compute addresses)
+        struct {
 #if defined(BYTE_ORDER_BIG)
-	    uint32_t op1 : 10;		//!< opcode bits
-	    uint32_t imm12 : 12;	//!< 12-bit immediate value
-	    uint32_t rn : 5;		//!< source register
-	    uint32_t rd : 5;		//!< destination register
+            uint32_t op1 : 10;          //!< opcode bits
+            uint32_t imm12 : 12;        //!< 12-bit immediate value
+            uint32_t rn : 5;            //!< source register
+            uint32_t rd : 5;            //!< destination register
 #elif defined(BYTE_ORDER_LITTLE)
-	    uint32_t rd : 5;		// destination register
-	    uint32_t rn : 5;		// source register
-	    uint32_t imm12 : 12;	// 12-bit immediate value
-	    uint32_t op1 : 10;		// opcode bits
+            uint32_t rd : 5;            // destination register
+            uint32_t rn : 5;            // source register
+            uint32_t imm12 : 12;        // 12-bit immediate value
+            uint32_t op1 : 10;          // opcode bits
 #else
 #  error must specify an endianess
 #endif
-	} lo12;
+        } lo12;
         // unconditional branch instructions with a 26-bit offset
-	struct {
+        struct {
 #if defined(BYTE_ORDER_BIG)
             uint32_t op : 6;            //!< opcode bits
             uint32_t imm : 26;          //!< 26-bit offset
@@ -169,39 +171,39 @@ void AArch64CodeObject::_resolveRelocs (llvm::object::SectionRef &sect, uint8_t 
 llvm::dbgs() << "## RELOCATIONS\n";
     for (auto reloc : sect.relocations()) {
       // the patch value; we ignore the relocation record if the symbol is not defined
-	auto symb = reloc.getSymbol();
-	if (sect.getObject()->symbols().end() != symb) {
+        auto symb = reloc.getSymbol();
+        if (sect.getObject()->symbols().end() != symb) {
           // the address to be patched (relative to the beginning of the object file)
-	    auto offset = reloc.getOffset();
-	  // the patch value.  PC relative addressing on the ARM is compute w.r.t. the
+            auto offset = reloc.getOffset();
+          // the patch value.  PC relative addressing on the ARM is compute w.r.t. the
           // instruction (*not* the following one).
           //
 #if (LLVM_VERSION_MAJOR > 10) /* getValue returns an Expected<> value as of LLVM 11.x */
-	    int32_t value = (int32_t)exitOnErr(symb->getValue()) - (int32_t)offset;
+            int32_t value = (int32_t)exitOnErr(symb->getValue()) - (int32_t)offset;
 #else
-	    int32_t value = (int32_t)symb->getValue() - (int32_t)offset;
+            int32_t value = (int32_t)symb->getValue() - (int32_t)offset;
 #endif
-	  // get the instruction to be patched
-	    AArch64InsnWord instr(*(uint32_t *)(code + offset));
+          // get the instruction to be patched
+            AArch64InsnWord instr(*(uint32_t *)(code + offset));
 llvm::dbgs() << "### " << llvm::format_hex_no_prefix(offset, 4) << ": "
 << "value = " << value << "; " << llvm::format_hex(instr.value(), 10) << " ==> ";
-	    switch (reloc.getType()) {
+            switch (reloc.getType()) {
 #if defined(OBJFF_MACHO)
-	    case llvm::MachO::ARM64_RELOC_PAGE21:
+            case llvm::MachO::ARM64_RELOC_PAGE21:
 #elif defined(OBJFF_ELF)
-	    case llvm::ELF::R_AARCH64_ADR_PREL_PG_HI21:
+            case llvm::ELF::R_AARCH64_ADR_PREL_PG_HI21:
 #endif
-		instr.patchHi21 (value);
+                instr.patchHi21 (value);
 llvm::dbgs() << llvm::format_hex(instr.value(), 10) << " [PAGE21]\n";
-	    	break;
+                break;
 #if defined(OBJFF_MACHO)
-	    case llvm::MachO::ARM64_RELOC_PAGEOFF12:
+            case llvm::MachO::ARM64_RELOC_PAGEOFF12:
 #elif defined(OBJFF_ELF)
-	    case llvm::ELF::R_AARCH64_ADD_ABS_LO12_NC:
+            case llvm::ELF::R_AARCH64_ADD_ABS_LO12_NC:
 #endif
-		instr.patchLo12 (value);
+                instr.patchLo12 (value);
 llvm::dbgs() << llvm::format_hex(instr.value(), 10) << " [PAGEOFF12]\n";
-	    	break;
+                break;
 #if defined(OBJFF_MACHO)
             case llvm::MachO::ARM64_RELOC_BRANCH26:
 #elif defined(OBJFF_ELF)
@@ -210,13 +212,13 @@ llvm::dbgs() << llvm::format_hex(instr.value(), 10) << " [PAGEOFF12]\n";
                 instr.patchB26 (value);
 llvm::dbgs() << llvm::format_hex(instr.value(), 10) << " [BRANCH26]\n";
                 break;
-	    default:
+            default:
                 assert (false && "unknown relocation-record type");
-	    	break;
-	    }
-	  // update the instruction with the patched version
-	    *(uint32_t *)(code + offset) = instr.value();
-	}
+                break;
+            }
+          // update the instruction with the patched version
+            *(uint32_t *)(code + offset) = instr.value();
+        }
     }
 llvm::dbgs() << "## END RELOCATIONS\n";
 
@@ -231,10 +233,12 @@ llvm::dbgs() << "## END RELOCATIONS\n";
 class AMD64CodeObject : public CodeObject {
   public:
     AMD64CodeObject (
-	target_info const *target,
-	std::unique_ptr<llvm::object::ObjectFile> objFile
+        target_info const *target,
+        std::unique_ptr<llvm::object::ObjectFile> objFile
     ) : CodeObject(target, std::move(objFile))
     { }
+
+    ~AMD64CodeObject () { }
 
   protected:
     bool _includeDataSect (llvm::object::SectionRef &sect);
@@ -265,24 +269,24 @@ void AMD64CodeObject::_resolveRelocs (llvm::object::SectionRef &sect, uint8_t *c
 {
     for (auto reloc : sect.relocations()) {
       // the patch value; we ignore the relocation record if the symbol is not defined
-	auto symb = reloc.getSymbol();
-	if (sect.getObject()->symbols().end() != symb) {
+        auto symb = reloc.getSymbol();
+        if (sect.getObject()->symbols().end() != symb) {
           // the address to be patched (relative to the beginning of the file)
-	    auto offset = reloc.getOffset();
-	  // the patch value; we compute the offset relative to the address of
-	  // byte following the patched location.
+            auto offset = reloc.getOffset();
+          // the patch value; we compute the offset relative to the address of
+          // byte following the patched location.
 #if (LLVM_VERSION_MAJOR > 10) /* getValue returns an Expected<> value as of LLVM 11.x */
-	    int32_t value = (int32_t)exitOnErr(symb->getValue()) - ((int32_t)offset + 4);
+            int32_t value = (int32_t)exitOnErr(symb->getValue()) - ((int32_t)offset + 4);
 #else
-	    int32_t value = (int32_t)symb->getValue() - ((int32_t)offset + 4);
+            int32_t value = (int32_t)symb->getValue() - ((int32_t)offset + 4);
 #endif
-	  // update the offset one byte at a time (since it is not guaranteed to
-	  // be 32-bit aligned)
-	    for (int i = 0;  i < 4;  i++) {
-		code[offset++] = value & 0xff;
-		value >>= 8;
-	    }
-	}
+          // update the offset one byte at a time (since it is not guaranteed to
+          // be 32-bit aligned)
+            for (int i = 0;  i < 4;  i++) {
+                code[offset++] = value & 0xff;
+                value >>= 8;
+            }
+        }
     }
 
 }
@@ -301,7 +305,7 @@ std::unique_ptr<CodeObject> CodeObject::create (
     auto objFile = llvm::object::ObjectFile::createObjectFile (objBuf);
     if (objFile.takeError()) {
 /* FIXME: error message */
-	return std::unique_ptr<CodeObject>(nullptr);
+        return std::unique_ptr<CodeObject>(nullptr);
     }
 
   // then wrap it in a target-specific subclass object
@@ -309,17 +313,17 @@ std::unique_ptr<CodeObject> CodeObject::create (
     switch (target->arch) {
 #ifdef ENABLE_ARM64
     case llvm::Triple::aarch64:
-	p = std::make_unique<AArch64CodeObject>(target, std::move(*objFile));
-	break;
+        p = std::make_unique<AArch64CodeObject>(target, std::move(*objFile));
+        break;
 #endif
 #ifdef ENABLE_X86
     case llvm::Triple::x86_64:
-	p = std::make_unique<AMD64CodeObject>(target, std::move(*objFile));
-	break;
+        p = std::make_unique<AMD64CodeObject>(target, std::move(*objFile));
+        break;
 #endif
     default:
-	assert (false && "unsupported architecture");
-	return std::unique_ptr<CodeObject>(nullptr);
+        assert (false && "unsupported architecture");
+        return std::unique_ptr<CodeObject>(nullptr);
     }
 
     p->_computeSize();
@@ -333,22 +337,22 @@ CodeObject::~CodeObject () { }
 void CodeObject::getCode (uint8_t *code)
 {
     for (auto sect : this->_sects) {
-	auto contents = sect.getContents();
-	if (contents.takeError()) {
-	    std::cerr << "unable to get contents of section\n";
-	    assert (0);
-	}
-	else {
-	    auto szb = contents->size();
-	    assert (sect.getSize() == szb && "inconsistent sizes");
-	  /* copy the code into the object */
-	    uint8_t *base = code + sect.getAddress();
-	    memcpy (base, contents->data(), szb);
-	  /* if the section is a text section, then resolve relocations */
-	    if (sect.isText()) {
-		this->_resolveRelocs (sect, base);
-	    }
-	}
+        auto contents = sect.getContents();
+        if (contents.takeError()) {
+            std::cerr << "unable to get contents of section\n";
+            assert (0);
+        }
+        else {
+            auto szb = contents->size();
+            assert (sect.getSize() == szb && "inconsistent sizes");
+          /* copy the code into the object */
+            uint8_t *base = code + sect.getAddress();
+            memcpy (base, contents->data(), szb);
+          /* if the section is a text section, then resolve relocations */
+            if (sect.isText()) {
+                this->_resolveRelocs (sect, base);
+            }
+        }
     }
 }
 
@@ -359,57 +363,57 @@ void CodeObject::dump (bool bits)
     bool foundTextSect = false;
     llvm::object::SectionRef textSect;
     for (auto sect : this->_obj->sections()) {
-	auto name = sect.getName();
-	auto addr = sect.getAddress();
-	auto sz = sect.getSize();
-	if (name) {
-	    llvm::dbgs() << "  " << *name;
-	} else {
-	    llvm::dbgs() << "  <section>";
-	}
-	if (sect.isText()) {
-	    if (! foundTextSect) {
-		textSect = sect;
-		foundTextSect = true;
-	    }
-	    llvm::dbgs() << " [TEXT] ";
-	}
-	else if (sect.isData()) {
-	    llvm::dbgs() << " [DATA] ";
-	}
-	llvm::dbgs() << " " << (void *)addr << ".." << (void *)(addr+sz) << "\n";
+        auto name = sect.getName();
+        auto addr = sect.getAddress();
+        auto sz = sect.getSize();
+        if (name) {
+            llvm::dbgs() << sect.getIndex() << ":  <" << *name << ">";
+        } else {
+            llvm::dbgs() << sect.getIndex() << ":  <section>";
+        }
+        if (sect.isText()) {
+            if (! foundTextSect) {
+                textSect = sect;
+                foundTextSect = true;
+            }
+            llvm::dbgs() << " [TEXT] ";
+        }
+        else if (sect.isData()) {
+            llvm::dbgs() << " [DATA] ";
+        }
+        llvm::dbgs() << " " << (void *)addr << ".." << (void *)(addr+sz) << "\n";
     }
 
   // print the symbols
     llvm::dbgs() << "=== Symbols ===\n";
     for (auto sym : this->_obj->symbols()) {
-	auto name = sym.getName();
-	auto addr = sym.getAddress();
-	if (name && addr) {
-	    llvm::dbgs() << "  " << *name << " @ " << (void *)*addr << "\n";
-	}
+        auto name = sym.getName();
+        auto addr = sym.getAddress();
+        if (name && addr) {
+            llvm::dbgs() << "  " << *name << " @ " << (void *)*addr << "\n";
+        }
     }
 
   // dump relocation info
     for (auto sect : this->_obj->sections()) {
-	this->_dumpRelocs (sect);
+        this->_dumpRelocs (sect);
     }
 
   // conditionally dump the code bits
-    if (bits && foundTextSect) {
+    if (bits && foundTextSect && (this->_sects.size() > 0)) {
       // first we create a scratch object to hold the relocated code
         size_t codeSzB = this->size();
         uint8_t *bytes = new uint8_t [codeSzB];
         this->getCode (bytes);
-	llvm::dbgs () << "RELOCATED CODE\n";
-	for (size_t i = 0;  i < codeSzB; i += 16) {
-	    size_t limit = std::min(i + 16, codeSzB);
-	    llvm::dbgs () << "  " << llvm::format_hex_no_prefix(i, 4) << ": ";
-	    for (int j = i;  j < limit;  j++) {
-		llvm::dbgs() << " " << llvm::format_hex_no_prefix(bytes[j], 2);
-	    }
-	    llvm::dbgs () << "\n";
-	}
+        llvm::dbgs () << "RELOCATED CODE\n";
+        for (size_t i = 0;  i < codeSzB; i += 16) {
+            size_t limit = std::min(i + 16, codeSzB);
+            llvm::dbgs () << "  " << llvm::format_hex_no_prefix(i, 4) << ": ";
+            for (int j = i;  j < limit;  j++) {
+                llvm::dbgs() << " " << llvm::format_hex_no_prefix(bytes[j], 2);
+            }
+            llvm::dbgs () << "\n";
+        }
     }
 
 }
@@ -419,30 +423,30 @@ void CodeObject::_dumpRelocs (llvm::object::SectionRef &sect)
     auto sectName = sect.getName();
 
     llvm::dbgs () << "RELOCATION INFO FOR "
-	<< (sectName ? *sectName : "<unknown section>") << "\n";
+        << (sectName ? *sectName : "<unknown section>") << "\n";
 
     for (auto reloc : sect.relocations()) {
-	auto offset = reloc.getOffset();
-	if (reloc.getSymbol() != this->_obj->symbols().end()) {
-	    auto symb = *(reloc.getSymbol());
-	    auto name = symb.getName();
-	    if (! name.takeError()) {
-		llvm::dbgs () << "  " << *name
-		    << ": addr = " << llvm::format_hex(exitOnErr(symb.getAddress()), 10)
+        auto offset = reloc.getOffset();
+        if (reloc.getSymbol() != this->_obj->symbols().end()) {
+            auto symb = *(reloc.getSymbol());
+            auto name = symb.getName();
+            if (! name.takeError()) {
+                llvm::dbgs () << "  " << *name
+                    << ": addr = " << llvm::format_hex(exitOnErr(symb.getAddress()), 10)
 #if (LLVM_VERSION_MAJOR > 10) /* getValue returns an Expected<> value as of LLVM 11.x */
-		    << "; value = "  << llvm::format_hex(exitOnErr(symb.getValue()), 10)
+                    << "; value = "  << llvm::format_hex(exitOnErr(symb.getValue()), 10)
 #else
-		    << "; value = "  << llvm::format_hex(symb.getValue(), 10)
+                    << "; value = "  << llvm::format_hex(symb.getValue(), 10)
 #endif
-		    << "; offset = " << llvm::format_hex(offset, 10)
+                    << "; offset = " << llvm::format_hex(offset, 10)
 // TODO: get the name associated with the type
-		    << "; type = " << reloc.getType() << "\n";
-	    } else {
-		llvm::dbgs () << "  <unknown>: offset = "
-		    << llvm::format_hex(offset, 10)
-		    << "; type = " << reloc.getType() << "\n";
-	    }
-	}
+                    << "; type = " << reloc.getType() << "\n";
+            } else {
+                llvm::dbgs () << "  <unknown>: offset = "
+                    << llvm::format_hex(offset, 10)
+                    << "; type = " << reloc.getType() << "\n";
+            }
+        }
     }
 
 }
@@ -458,15 +462,15 @@ void CodeObject::_computeSize ()
   //
     size_t codeSzb = 0;
     for (auto sect : this->_obj->sections()) {
-	if (this->_includeSect (sect)) {
-	    this->_sects.push_back (sect);
-	    uint64_t addr = sect.getAddress();
-	    uint64_t szb = sect.getSize();
+        if (this->_includeSect (sect)) {
+            this->_sects.push_back (sect);
+            uint64_t addr = sect.getAddress();
+            uint64_t szb = sect.getSize();
 #ifndef OBJFF_ELF
-	    assert (codeSzb <= addr && "overlapping sections");
+            assert (codeSzb <= addr && "overlapping sections");
 #endif
-	    codeSzb = addr + szb;
-	}
+            codeSzb = addr + szb;
+        }
     }
 
   // check that we actual got something

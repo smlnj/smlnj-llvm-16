@@ -1,6 +1,6 @@
 /// \file overflow.cpp
 ///
-/// \copyright 2021 The Fellowship of SML/NJ (http://www.smlnj.org)
+/// \copyright 2023 The Fellowship of SML/NJ (https://smlnj.org)
 /// All rights reserved.
 ///
 /// \brief This file contains the CodeBuffer methods that support

@@ -14,12 +14,6 @@
 
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/IR/LegacyPassManager.h" /* needed for code gen */
-#ifdef LEGACY_PASS_MANAGER
-#include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Transforms/InstCombine/InstCombine.h"
-#include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Scalar/GVN.h"
-#else
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Scalar/DCE.h"
@@ -30,8 +24,6 @@
 #include "llvm/Transforms/Scalar/Reassociate.h"
 #include "llvm/Transforms/Scalar/SCCP.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
-#endif
-#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/FileSystem.h"
@@ -40,11 +32,7 @@
 
 
 mc_gen::mc_gen (llvm::LLVMContext &context, target_info const *info)
-#ifdef LEGACY_PASS_MANAGER
-  : _tgtInfo(info), _tgtMachine(nullptr)
-#else
   : _tgtInfo(info), _tgtMachine(nullptr), _mam(), _fam(), _pb(nullptr)
-#endif
 {
   // get the LLVM target triple
     llvm::Triple triple = info->getTriple();
@@ -146,12 +134,7 @@ void mc_gen::beginModule (llvm::Module *module)
 
 } // mc_gen::beginModule
 
-void mc_gen::endModule ()
-{
-#ifdef LEGACY_PASS_MANAGER
-    this->_passMngr.reset();
-#endif
-}
+void mc_gen::endModule () { }
 
 void mc_gen::optimize (llvm::Module *module)
 {

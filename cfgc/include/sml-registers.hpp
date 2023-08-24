@@ -1,6 +1,6 @@
 /// \file sml-registers.hpp
 ///
-/// \copyright 2020 The Fellowship of SML/NJ (http://www.smlnj.org)
+/// \copyright 2023 The Fellowship of SML/NJ (https://smlnj.org)
 /// All rights reserved.
 ///
 /// \brief This file defines the `reg_state` class, which encapsulates the

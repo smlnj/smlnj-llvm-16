@@ -1,6 +1,6 @@
 /// \file sml-registers.cpp
 ///
-/// \copyright 2020 The Fellowship of SML/NJ (http://www.smlnj.org)
+/// \copyright 2023 The Fellowship of SML/NJ (https://smlnj.org)
 /// All rights reserved.
 ///
 /// \brief Implementation of methods for the classes defined in "sml-registers.hpp"

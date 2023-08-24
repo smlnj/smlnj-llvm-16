@@ -1,6 +1,6 @@
-/// \file codegen.cpp
+/// \file code-buffer.cpp
 ///
-/// \copyright 2020 The Fellowship of SML/NJ (http://www.smlnj.org)
+/// \copyright 2023 The Fellowship of SML/NJ (https://smlnj.org)
 /// All rights reserved.
 ///
 /// \brief This file implements the methods for the `code_buffer` class
@@ -14,7 +14,6 @@
 #include "cfg.hpp" // for argument setup
 
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/FileSystem.h"

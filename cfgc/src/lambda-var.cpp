@@ -1,6 +1,6 @@
 /// \file lambda-var.cpp
 ///
-/// \copyright 2020 The Fellowship of SML/NJ (http://www.smlnj.org)
+/// \copyright 2023 The Fellowship of SML/NJ (https://smlnj.org)
 /// All rights reserved.
 ///
 /// \brief Implementation of the primitive LambdaVar module from cfg.asdl
