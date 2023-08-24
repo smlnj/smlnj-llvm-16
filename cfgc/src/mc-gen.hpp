@@ -16,12 +16,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Target/TargetMachine.h"
-
-#ifdef LEGACY_PASS_MANAGER
-#include "llvm/IR/LegacyPassManager.h"
-#else
 #include "llvm/Passes/PassBuilder.h"
-#endif
 
 class mc_gen {
   public:
@@ -45,13 +40,12 @@ class mc_gen {
   private:
     target_info const *_tgtInfo;
     std::unique_ptr<llvm::TargetMachine> _tgtMachine;
-#ifdef LEGACY_PASS_MANAGER
-    std::unique_ptr<llvm::legacy::FunctionPassManager> _passMngr;
-#else
+
+  // analysis and optimization managers
     llvm::ModuleAnalysisManager _mam;
     llvm::FunctionAnalysisManager _fam;
+    llvm::ModulePassManager _pm;
     llvm::PassBuilder *_pb;
-#endif
 
 };
 

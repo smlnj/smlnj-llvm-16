@@ -99,8 +99,6 @@ llvm::dbgs() << "host CPU = " << llvm::sys::getHostCPUName() << "\n";
 
     this->_tgtMachine = std::move(tgtMachine);
 
-#ifndef LEGACY_PASS_MANAGER /* using new pass manager */
-
     // Create the new pass manager builder.
     this->_pb = new llvm::PassBuilder(this->_tgtMachine.get());
 
@@ -113,74 +111,9 @@ llvm::dbgs() << "host CPU = " << llvm::sys::getHostCPUName() << "\n";
     this->_pb->registerFunctionAnalyses(this->_fam);
     this->_pb->registerLoopAnalyses(lam);
     this->_pb->crossRegisterProxies(lam, this->_fam, cgam, this->_mam);
-#endif // ! LEGACY_PASS_MANAGER
-
-} // mc_gen constructor
-
-mc_gen::~mc_gen ()
-{
-#ifndef LEGACY_PASS_MANAGER
-    if (this->_pb != nullptr) {
-        delete this->_pb;
-    }
-#endif
-
-}
-
-void mc_gen::beginModule (llvm::Module *module)
-{
-  // tell the module about the target machine
-    module->setTargetTriple(this->_tgtMachine->getTargetTriple().getTriple());
-    module->setDataLayout(this->_tgtMachine->createDataLayout());
-
-#ifdef LEGACY_PASS_MANAGER
-  // setup the pass manager
-    this->_passMngr = std::make_unique<llvm::legacy::FunctionPassManager> (module);
-
-  // setup analysis passes
-    this->_passMngr->add(
-	llvm::createTargetTransformInfoWrapperPass(
-	    this->_tgtMachine->getTargetIRAnalysis()));
-/* FIXME: are there other analysis passes that we need? */
-
-  // set up a optimization pipeline following the pattern used in the Manticore
-  // compiler.
-    this->_passMngr->add(llvm::createLowerExpectIntrinsicPass());       /* -lower-expect */
-    this->_passMngr->add(llvm::createCFGSimplificationPass());          /* -simplifycfg */
-    this->_passMngr->add(llvm::createInstructionCombiningPass());       /* -instcombine */
-    this->_passMngr->add(llvm::createReassociatePass());                /* -reassociate */
-    this->_passMngr->add(llvm::createEarlyCSEPass());                   /* -early-cse */
-    this->_passMngr->add(llvm::createGVNPass());                        /* -gvn */
-//    this->_passMngr->add(llvm::createSCCPPass());			/* -sccp */
-    this->_passMngr->add(llvm::createDeadCodeEliminationPass());        /* -dce */
-    this->_passMngr->add(llvm::createCFGSimplificationPass());          /* -simplifycfg */
-    this->_passMngr->add(llvm::createInstructionCombiningPass());       /* -instcombine */
-    this->_passMngr->add(llvm::createCFGSimplificationPass());          /* -simplifycfg */
-
-    this->_passMngr->doInitialization();
-#endif
-
-} // mc_gen::beginModule
-
-void mc_gen::endModule ()
-{
-#ifdef LEGACY_PASS_MANAGER
-    this->_passMngr.reset();
-#endif
-}
-
-void mc_gen::optimize (llvm::Module *module)
-{
-#ifdef LEGACY_PASS_MANAGER
-  // run the function optimizations over every function
-    for (auto it = module->begin();  it != module->end();  ++it) {
-        this->_passMngr->run (*it);
-    }
-#else
-    llvm::FunctionPassManager fpm;
-    llvm::ModulePassManager pm;
 
     // set up the optimization passes
+    llvm::FunctionPassManager fpm;
     fpm.addPass(llvm::LowerExpectIntrinsicPass());      // -lower-expect
     fpm.addPass(llvm::SimplifyCFGPass());               // -simplifycfg
     fpm.addPass(llvm::InstCombinePass());               // -instcombine
@@ -196,11 +129,37 @@ void mc_gen::optimize (llvm::Module *module)
     opts.ConvertSwitchToLookupTable = true;
     fpm.addPass(llvm::SimplifyCFGPass(opts));           // -simplifycfg
 
-    pm.addPass (llvm::createModuleToFunctionPassAdaptor(std::move(fpm)));
+    this->_pm.addPass (llvm::createModuleToFunctionPassAdaptor(std::move(fpm)));
 
-  // run the function optimizations over every function
-    pm.run (*module, this->_mam);
+} // mc_gen constructor
+
+mc_gen::~mc_gen ()
+{
+    if (this->_pb != nullptr) {
+        delete this->_pb;
+    }
+
+}
+
+void mc_gen::beginModule (llvm::Module *module)
+{
+  // tell the module about the target machine
+    module->setTargetTriple(this->_tgtMachine->getTargetTriple().getTriple());
+    module->setDataLayout(this->_tgtMachine->createDataLayout());
+
+} // mc_gen::beginModule
+
+void mc_gen::endModule ()
+{
+#ifdef LEGACY_PASS_MANAGER
+    this->_passMngr.reset();
 #endif
+}
+
+void mc_gen::optimize (llvm::Module *module)
+{
+  // run the function optimizations over every function
+    this->_pm.run (*module, this->_mam);
 
 }
 
@@ -238,41 +197,6 @@ void mc_gen::dumpCode (llvm::Module *module, std::string const & stem, bool asmC
     else {
         outFile = stem;
     }
-
-#ifdef DEBUG_MC
-    llvm::PassRegistry *Registry = llvm::PassRegistry::getPassRegistry();
-    llvm::initializeCore(*Registry);
-    llvm::initializeCodeGen(*Registry);
-    llvm::initializeLoopStrengthReducePass(*Registry);
-    llvm::initializeLowerIntrinsicsPass(*Registry);
-    llvm::initializeEntryExitInstrumenterPass(*Registry);
-    llvm::initializePostInlineEntryExitInstrumenterPass(*Registry);
-    llvm::initializeUnreachableBlockElimLegacyPassPass(*Registry);
-    llvm::initializeConstantHoistingLegacyPassPass(*Registry);
-    llvm::initializeScalarOpts(*Registry);
-/*
-    llvm::initializeVectorization(*Registry);
-*/
-    llvm::initializeScalarizeMaskedMemIntrinPass(*Registry);
-    llvm::initializeExpandReductionsPass(*Registry);
-    llvm::initializeHardwareLoopsPass(*Registry);
-
-    // Initialize debugging passes.
-    llvm::initializeScavengerTestPass(*Registry);
-
-    // Register the target printer for --version.
-    llvm::cl::AddExtraVersionPrinter(
-	llvm::TargetRegistry::printRegisteredTargetsForVersion);
-
-    const char *argv[] = {
-	"codegen",
-	"--print-after-all"
-      };
-    llvm::cl::ParseCommandLineOptions(2, argv, "codegen\n");
-#endif
-
-//    LLVMTargetMachine &LLVMTM = static_cast<LLVMTargetMachine &>(*Target);
-//    MachineModuleInfoWrapperPass *MMIWP = new MachineModuleInfoWrapperPass(&LLVMTM);
 
     std::error_code EC;
     llvm::raw_fd_ostream outStrm(outFile, EC, llvm::sys::fs::OF_None);
