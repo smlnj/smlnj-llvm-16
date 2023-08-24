@@ -13,7 +13,7 @@
 
 #include <string>
 
-enum class output { PrintAsm, AsmFile, ObjFile, Memory };
+enum class output { PrintAsm, AsmFile, ObjFile, Memory, LLVMAsmFile };
 
 // set the target architecture.  This call returns `true` when there
 // is an error and `false` otherwise.

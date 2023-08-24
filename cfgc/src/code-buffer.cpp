@@ -14,8 +14,11 @@
 #include "cfg.hpp" // for argument setup
 
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/raw_os_ostream.h"
 
 /* control the adding of symbolic names to some values for easier debugging */
 #ifndef _DEBUG
@@ -67,9 +70,9 @@ code_buffer::code_buffer (target_info const *target)
 	this->intTy = this->i64Ty;
 	this->_wordSzB = 8;
     }
-    this->mlValueTy = this->intTy->getPointerTo ();
-    this->objPtrTy = this->mlValueTy->getPointerTo ();
-    this->bytePtrTy = this->i8Ty->getPointerTo (ML_HEAP_ADDR_SP);
+
+    this->ptrTy = llvm::PointerType::getUnqual(this->_context);
+    this->mlValueTy = this->ptrTy;
     this->voidTy = Type::getVoidTy (this->_context);
 
   // "call-gc" types
@@ -94,11 +97,7 @@ code_buffer::code_buffer (target_info const *target)
 	int nArgs = this->_regInfo.numMachineRegs();
 	tys.reserve (nArgs);
 	for (int i = 0;  i < nArgs;  ++i) {
-	    if (this->_regInfo.machineReg(i)->id() <= sml_reg_id::STORE_PTR) {
-		tys.push_back (this->objPtrTy);
-	    } else {
-		tys.push_back (this->mlValueTy);
-	    }
+	    tys.push_back (this->ptrTy);
 	}
 	this->_raiseOverflowFnTy = llvm::FunctionType::get(this->voidTy, tys, false);
 	this->_overflowBB = nullptr;
@@ -253,11 +252,7 @@ void code_buffer::_addExtraParamTys (std::vector<Type *> &tys, arg_info const &i
   // the parameter list starts with the special registers (i.e., alloc ptr, ...),
   //
     for (int i = 0;  i < info.nExtra;  ++i) {
-	if (this->_regInfo.machineReg(i)->id() <= sml_reg_id::STORE_PTR) {
-	    tys.push_back (this->objPtrTy);
-	} else {
-	    tys.push_back (this->mlValueTy);
-	}
+	tys.push_back (this->ptrTy);
     }
 
     if (info.basePtr) {
@@ -648,12 +643,21 @@ void code_buffer::dumpObj (std::string const &stem) const
     this->_gen->dumpCode (this->_module, stem, false);
 }
 
+void code_buffer::dumpLL (std::string const &stem) const
+{
+    std::error_code EC;
+    llvm::raw_fd_ostream outS(stem + ".ll", EC, llvm::sys::fs::OF_Text);
+    if (EC) {
+    }
+    this->_module->print(outS, nullptr);
+    outS.close();
+
+}
+
 // dump the current module to stderr
 void code_buffer::dump () const
 {
-#if defined(_DEBUG) || defined(LLVM_ENABLE_DUMP)
     this->_module->dump();
-#endif
 }
 
 // run the LLVM verifier on the module

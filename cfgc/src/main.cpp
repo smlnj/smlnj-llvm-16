@@ -19,7 +19,7 @@
 
 void usage ()
 {
-    std::cerr << "usage: cfgc [ -o | -S | -c ] [ --emit-llvm ] [ --bits ] [ --target <target> ] <pkl-file>\n";
+    std::cerr << "usage: cfgc [ -o | -S | -c | -L] [ --emit-llvm ] [ --bits ] [ --target <target> ] <pkl-file>\n";
     exit (1);
 }
 
@@ -44,6 +44,8 @@ int main (int argc, char **argv)
 		out = output::AsmFile;
 	    } else if (flag == "-c") {
 		out = output::Memory;
+            } else if (flag == "-L") {
+                out = output::LLVMAsmFile;
 	    } else if (flag == "--emit-llvm") {
 		emitLLVM = true;
 	    } else if (flag == "--bits") {
@@ -60,7 +62,7 @@ int main (int argc, char **argv)
 	    }
 	}
 	else if ((i < argc-1) || (src != "")) {
-	    std::cerr << "usage: codegen [ -o | -S | -c ] [ --emit-llvm ] [ --bits ] <pkl-file>\n";
+	    std::cerr << "usage: codegen [ -o | -S | -c | -L ] [ --emit-llvm ] [ --bits ] <pkl-file>\n";
 	    exit (1);
 	}
 	else {

@@ -1,6 +1,6 @@
 /// \file mc-gen.hpp
 ///
-/// \copyright 2020 The Fellowship of SML/NJ (http://www.smlnj.org)
+/// \copyright 2023 The Fellowship of SML/NJ (https://smlnj.org)
 /// All rights reserved.
 ///
 /// \brief Wrapper class for the low-level machine-specific parts of the code generator
@@ -24,17 +24,19 @@ class mc_gen {
     mc_gen (llvm::LLVMContext &context, target_info const *target);
     ~mc_gen ();
 
-  // per-module initialization and finalization
+    /// per-module initialization
     void beginModule (llvm::Module *module);
+
+    /// per-module finalization
     void endModule ();
 
-  // run the per-function optimizations over the functions of the module
+    /// run the per-function optimizations over the functions of the module
     void optimize (llvm::Module *module);
 
-  // dump the code to an output file
+    /// dump the code to an output file
     void dumpCode (llvm::Module *module, std::string const & stem, bool asmCode = true) const;
 
-  // compile the LLVM module to a SML code object
+    /// compile the code into the code buffer's object-file backing store.
     std::unique_ptr<CodeObject> compile (llvm::Module *module);
 
   private:

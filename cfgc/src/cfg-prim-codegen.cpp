@@ -66,13 +66,8 @@ namespace CFG_Prim {
       // write object descriptor
 	buf->createStoreML (buf->uConst(this->_v_desc.toUInt64()), allocPtr);
 
-      // compute the object's address and cast it to an ML value
-	Value *obj = buf->createBitCast (
-	    buf->createGEP (allocPtr, 1),
-	    buf->mlValueTy);
-
-      // get a pointer to the beginning of the object that has `char *` type
-	Value *initPtr = buf->createBitCast (obj, buf->bytePtrTy);
+      // compute the object's address and cast it to a ML value
+	Value *obj = buf->asMLValue (buf->createGEP (allocPtr, 1));
 
       // initialize the object's fields
 	int offset = 0;
@@ -86,7 +81,7 @@ namespace CFG_Prim {
 	    Type *elemTy = numType (buf, fld->get_kind(), fld->get_sz());
             Type *argTy = args[i]->getType();
 	  // get a `char *` pointer to obj+offset
-            auto adr = buf->createGEP (initPtr, offset);
+            auto adr = buf->createGEP (obj, offset);
             if (argTy == buf->mlValueTy) {
               // the field should be a native-sized integer
                 assert (elemTy == buf->intTy && "expected native integer field");
@@ -94,10 +89,7 @@ namespace CFG_Prim {
             }
             else {
                 assert (args[i]->getType() == elemTy && "type mismatch");
-                buf->createStore (
-                    args[i],
-                    buf->createBitCast (adr, elemTy->getPointerTo()),
-                    szb);
+                buf->createStore (args[i], adr, szb);
             }
 	    offset += szb;
 	}
@@ -105,10 +97,7 @@ namespace CFG_Prim {
 	offset = (offset + (buf->wordSzInBytes() - 1)) & ~(buf->wordSzInBytes() - 1);
 
       // bump the allocation pointer
-	buf->setMLReg (sml_reg_id::ALLOC_PTR,
-	    buf->createBitCast (
-	        buf->createGEP (initPtr, offset),
-		buf->objPtrTy));
+	buf->setMLReg (sml_reg_id::ALLOC_PTR, buf->createGEP (obj, offset));
 
 	return obj;
 
@@ -126,8 +115,7 @@ namespace CFG_Prim {
                 allocPtr = buf->createIntToPtr(
                     buf->createOr(
                         buf->createPtrToInt(allocPtr),
-                        buf->uConst(align - buf->wordSzInBytes())),
-                    buf->objPtrTy);
+                        buf->uConst(align - buf->wordSzInBytes())));
             }
 	  // write object descriptor
 	    uint64_t desc = this->_v_desc.valOf().toUInt64();
@@ -148,7 +136,7 @@ namespace CFG_Prim {
 	buf->setMLReg (sml_reg_id::ALLOC_PTR,
 	    buf->createBitCast (
 	        buf->createGEP (buf->i8Ty, allocPtr, len + buf->wordSzInBytes()),
-		buf->objPtrTy));
+		buf->ptrTy));
 
 	return obj;
 
@@ -321,7 +309,7 @@ namespace CFG_Prim {
 
     Value *PURE_SUBSCRIPT::codegen (code_buffer * buf, Args_t const &args)
     {
-	Value *adr = buf->createGEP (buf->asObjPtr(args[0]), buf->asInt(args[1]));
+	Value *adr = buf->createGEP (buf->asPtr(args[0]), buf->asInt(args[1]));
 	return buf->build().CreateLoad (buf->mlValueTy, adr);
 
     } // PURE_SUBSCRIPT::codegen
@@ -341,12 +329,10 @@ namespace CFG_Prim {
 	Type *elemTy = numType (buf, this->_v_kind, this->_v_sz);
 
 /* QUESTION: should we specialize the case where the offset is 0? */
-	Value *adr = buf->createBitCast (
-	    buf->createGEP (
+	Value *adr = buf->createGEP (
 		buf->i8Ty,
-		buf->asBytePtr (args[0]),
-		buf->uConst (this->_v_offset)),
-	    elemTy->getPointerTo());
+		buf->asPtr(args[0]),
+		buf->uConst (this->_v_offset));
 
 	return buf->createLoad (elemTy, adr, bitsToBytes(this->_v_sz));
 
@@ -357,13 +343,13 @@ namespace CFG_Prim {
 
     Value *DEREF::codegen (code_buffer * buf, Args_t const &args)
     {
-	return buf->build().CreateLoad (buf->mlValueTy, buf->asObjPtr(args[0]));
+	return buf->build().CreateLoad (buf->mlValueTy, buf->asPtr(args[0]));
 
     } // DEREF::codegen
 
     Value *SUBSCRIPT::codegen (code_buffer * buf, Args_t const &args)
     {
-	Value *baseAdr = buf->asObjPtr(args[0]);
+	Value *baseAdr = buf->asPtr(args[0]);
 	Value *adr = buf->createGEP(baseAdr, buf->asInt(args[1]));
 // QUESTION: should we mark the load as volatile?
 	return buf->build().CreateLoad (buf->mlValueTy, adr);
@@ -375,11 +361,7 @@ namespace CFG_Prim {
 	Type *elemTy = numType (buf, this->_v_kind, this->_v_sz);
 
       // RAW_LOAD assumes byte addressing, so we compute the address as a `char *`
-      // and then bitcast to the desired pointer type for the load
-	Value *adr =
-	    buf->createPointerCast (
-	        buf->createGEP (buf->i8Ty, args[0], args[1]),
-		elemTy->getPointerTo());
+	Value *adr = buf->createGEP (buf->i8Ty, args[0], args[1]);
 
 // QUESTION: should we mark the load as volatile?
 	return buf->createLoad (elemTy, adr, bitsToBytes(this->_v_sz));
@@ -484,10 +466,7 @@ namespace CFG_Prim {
 
       // RAW_STORE assumes byte addressing, so we compute the address as a `char *`
       // and then bitcast to the desired pointer type for the store
-	Value *adr =
-	    buf->createPointerCast (
-	        buf->createGEP (buf->i8Ty, args[0], args[1]),
-		elemTy->getPointerTo());
+	Value *adr = buf->createGEP (buf->i8Ty, args[0], args[1]);
 
 	return buf->createStore (args[2], adr, bitsToBytes(this->_v_sz));
 

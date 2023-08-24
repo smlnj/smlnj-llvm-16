@@ -1,6 +1,6 @@
 /// \file mc-gen.cpp
 ///
-/// \copyright 2020 The Fellowship of SML/NJ (http://www.smlnj.org)
+/// \copyright 2023 The Fellowship of SML/NJ (https://smlnj.org)
 /// All rights reserved.
 ///
 /// \brief Wrapper for the low-level machine-specific parts of the code generator
@@ -10,16 +10,10 @@
 
 #include "target-info.hpp"
 #include "mc-gen.hpp"
+#include "code-buffer.hpp"
 
-#include "llvm/IR/PassManager.h"
-#include "llvm/MC/TargetRegistry.h" /* used to be in "llvm/Support" */
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/SmallVectorMemoryBuffer.h"
-#include "llvm/Support/Host.h"
-#include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/IR/LegacyPassManager.h" /* needed for code gen */
-#include "llvm/Object/ObjectFile.h"
-
 #ifdef LEGACY_PASS_MANAGER
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
@@ -37,6 +31,10 @@
 #include "llvm/Transforms/Scalar/SCCP.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #endif
+#include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/SmallVectorMemoryBuffer.h"
+#include "llvm/Support/Host.h"
+#include "llvm/Support/FileSystem.h"
 
 #include <iostream>
 
@@ -62,7 +60,6 @@ mc_gen::mc_gen (llvm::LLVMContext &context, target_info const *info)
     }
 
 llvm::dbgs() << "host CPU = " << llvm::sys::getHostCPUName() << "\n";
-
 
     llvm::TargetOptions tgtOptions;
 

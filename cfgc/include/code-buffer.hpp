@@ -177,24 +177,24 @@ class code_buffer {
 	    return this->createIntToPtr(
 		this->createOr(
                     this->createPtrToInt (this->mlReg (sml_reg_id::ALLOC_PTR)),
-		    this->uConst (4)),
-		this->objPtrTy);
+		    this->uConst (4)));
 	}
     }
 
-  // cached types
-    llvm::IntegerType *i8Ty;
-    llvm::IntegerType *i16Ty;
-    llvm::IntegerType *i32Ty;
-    llvm::IntegerType *i64Ty;
-    Type *f32Ty;
-    Type *f64Ty;
-    llvm::IntegerType *intTy;	// native integer type
-    Type *mlValueTy;		// the uniform ML value type, which is a pointer to the intTy
-    Type *objPtrTy;		// pointer into the heap (i.e., a pointer to an ML value)
-    Type *bytePtrTy;		// "char *" type
-    Type *voidTy;		// "void"
+    /// @{
+    Type *voidTy;		///< the "void" type
+    llvm::IntegerType *i8Ty;    ///< 8-bit integer type
+    llvm::IntegerType *i16Ty;   ///< 16-bit integer type
+    llvm::IntegerType *i32Ty;   ///< 32-bit integer type
+    llvm::IntegerType *i64Ty;   ///< 64-bit integer type
+    Type *f32Ty;                ///< 32-bit floating-point type
+    Type *f64Ty;                ///< 64-bit floating-point type
+    llvm::IntegerType *intTy;	///< the native integer type
+    Type *ptrTy;                ///< the opaque pointer type
+    Type *mlValueTy;		///< the uniform ML value type, which is `ptrTy`
+    /// @}
 
+    /// return the integer type of the specified bit size
     llvm::IntegerType *iType (int sz) const
     {
 	if (sz == 64) return this->i64Ty;
@@ -202,53 +202,34 @@ class code_buffer {
 	else if (sz == 16) return this->i16Ty;
 	else return this->i8Ty;
     }
+
+    /// return the floating-point type of the specified bit size
     Type *fType (int sz) const
     {
 	if (sz == 64) return this->f64Ty;
 	else return this->f32Ty;
     }
 
-  // ensure that a value has the `mlValue` type
-    Value *asMLValue (Value *v)
+  // ensure that a value has the opaque pointer type
+    Value *asPtr (Value *v)
     {
 	auto ty = v->getType();
-	if (ty == this->mlValueTy) {
-	    return v;
-	} else if (ty->isPointerTy()) {
-	    return this->_builder.CreateBitCast (v, this->mlValueTy);
-	} else {
-	    return this->_builder.CreateIntToPtr(v, this->mlValueTy);
-	}
+        if (! ty->isOpaquePointerTy()) {
+            if (ty->isIntegerTy()) {
+	        return this->_builder.CreateIntToPtr(v, this->ptrTy);
+            } else {
+                assert (false && "invalid type conversion");
+            }
+        } else {
+            return v;
+        }
     }
 
-  // ensure that a value has the pointer to `mlValue` type
-    Value *asObjPtr (Value *v)
-    {
-	auto ty = v->getType();
-	if (! ty->isPointerTy()) {
-	    return this->_builder.CreateIntToPtr(v, this->objPtrTy);
-	} else if (ty != this->objPtrTy) {
-	    return this->_builder.CreateBitCast(v, this->objPtrTy);
-	} else {
-	    return v;
-	}
-    }
+    /// ensure that a value has the `mlValue` type
+    Value *asMLValue (Value *v) { return asPtr(v); }
 
-  // ensure that a value has the LLVM type `i8*`
-    Value *asBytePtr (Value *v)
-    {
-	auto ty = v->getType();
-	if (! ty->isPointerTy()) {
-	    return this->_builder.CreateIntToPtr(v, this->bytePtrTy);
-	} else if (ty != this->bytePtrTy) {
-	    return this->_builder.CreateBitCast(v, this->bytePtrTy);
-	} else {
-	    return v;
-	}
-    }
-
-  // ensure that a value is a machine-sized int type (assume that it is
-  // either a intTy or mlValueTy value)
+    /// ensure that a value is a machine-sized int type (assume that it is
+    /// either a intTy or mlValueTy value)
     Value *asInt (Value *v)
     {
 	if (v->getType()->isPointerTy()) {
@@ -450,8 +431,7 @@ class code_buffer {
 		    this->_readReg->getFunctionType(),
 		    this->_readReg,
 		    { llvm::MetadataAsValue::get(this->_context, this->_spRegMD) }),
-		this->iConst(offset)),
-	    ptrTy);
+		this->iConst(offset)));
 
     }
 
@@ -658,12 +638,13 @@ class code_buffer {
       // NOTE: our loads are always aligned to the ABI alignment requirement
 	return this->_builder.CreateAlignedLoad (ty, adr, llvm::MaybeAlign(0));
     }
-  // create store of an ML value
+
+    /// create s store of a ML value
     void createStoreML (Value *v, Value *adr)
     {
 	this->_builder.CreateAlignedStore (
 	    this->asMLValue(v),
-	    this->asObjPtr(adr),
+	    this->asPtr(adr),
 	    llvm::MaybeAlign(this->_wordSzB));
     }
     void createStore (Value *v, Value *adr, unsigned align)
@@ -675,9 +656,9 @@ class code_buffer {
     }
 
   /***** shorthand for type cast instructions *****/
-    Value *createIntToPtr (Value *v, Type *ty)
+    Value *createIntToPtr (Value *v)
     {
-	return this->_builder.CreateIntToPtr (v, ty);
+	return this->_builder.CreateIntToPtr (v, this->ptrTy);
     }
     Value *createPtrToInt (Value *v)
     {
@@ -711,26 +692,32 @@ class code_buffer {
     {
 	return this->_builder.CreateBr (bb);
     }
+
+    /// create a GEP instruction for accessing a ML value
     Value *createGEP (Value *base, Value *idx)
     {
 	return this->_builder.CreateInBoundsGEP (this->mlValueTy, base, idx);
     }
+
+    /// create a GEP instruction for accessing a value of the specified type
     Value *createGEP (Type *elemTy, Value *base, Value *idx)
     {
-	return this->_builder.CreateInBoundsGEP (
-            elemTy,
-	    this->createBitCast (base, elemTy->getPointerTo()),
-	    idx);
+	return this->_builder.CreateInBoundsGEP (elemTy, this->asPtr(base), idx);
     }
+
+    /// create a GEP instruction for accessing a ML value using a constant index
     Value *createGEP (Value *base, int32_t idx)
     {
 	return this->_builder.CreateInBoundsGEP (this->mlValueTy, base, this->i32Const(idx));
     }
+
+    /// create a GEP instruction for accessing a value of the specified type
+    /// using a constant index
     Value *createGEP (Type *elemTy, Value *base, int32_t idx)
     {
 	return this->_builder.CreateInBoundsGEP (
             elemTy,
-	    this->createBitCast (base, elemTy->getPointerTo()),
+	    this->asPtr(base),
 	    this->i32Const(idx));
     }
 
@@ -753,6 +740,9 @@ class code_buffer {
 
     /// dump machine code to an object file
     void dumpObj (std::string const &stem) const;
+
+    /// dump the LLVM code to a file
+    void dumpLL (std::string const &stem) const;
 
   /***** Debugging support *****/
 
@@ -820,7 +810,7 @@ class code_buffer {
     {
 	return this->build().CreateAlignedLoad (
 	    this->mlValueTy,
-	    this->stkAddr (this->objPtrTy, offset),
+	    this->stkAddr (this->ptrTy, offset),
 	    llvm::MaybeAlign (this->wordSzInBytes()),
 	    name);
     }

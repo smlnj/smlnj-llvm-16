@@ -86,9 +86,9 @@ void codegen (std::string const & src, bool emitLLVM, bool dumpBits, output out)
     cu->codegen (CodeBuf);
     std::cout << " " << genTimer.msec() << "ms\n" << std::flush;
 
-    if (emitLLVM) {
-	CodeBuf->dump ();
-    }
+//    if (emitLLVM) {
+//	CodeBuf->dump ();
+//    }
 
     if (! CodeBuf->verify ()) {
 	std::cerr << "Module verified\n";
@@ -133,6 +133,9 @@ void codegen (std::string const & src, bool emitLLVM, bool dumpBits, output out)
 		obj->dump(dumpBits);
 	    }
 	} break;
+      case output::LLVMAsmFile:
+        CodeBuf->dumpLL(stem);
+        break;
     }
 
     CodeBuf->endModule();

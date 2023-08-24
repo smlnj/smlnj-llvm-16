@@ -116,7 +116,7 @@ namespace CFG {
     Value *SELECT::codegen (code_buffer * buf)
     {
 	Value *adr = buf->createGEP (
-	    buf->asObjPtr(this->_v_arg->codegen(buf)),
+	    buf->asPtr(this->_v_arg->codegen(buf)),
 	    static_cast<int32_t>(this->_v_idx));
 	return buf->createLoad (buf->mlValueTy, adr);
 
@@ -125,7 +125,7 @@ namespace CFG {
     Value *OFFSET::codegen (code_buffer * buf)
     {
 	return buf->createGEP (
-	    buf->asObjPtr(this->_v_arg->codegen(buf)),
+	    buf->asPtr(this->_v_arg->codegen(buf)),
 	    static_cast<int32_t>(this->_v_idx));
 
     } // OFFSET::codegen

@@ -38,13 +38,7 @@ llvm::BasicBlock *code_buffer::getOverflowBB ()
     	Args_t args;
 	args.reserve (nArgs);
 	for (int i = 0;  i < nArgs;  ++i) {
-	    llvm::Type *ty;
-	    if (this->_regInfo.machineReg(i)->id() <= sml_reg_id::STORE_PTR) {
-		ty = this->objPtrTy;
-	    } else {
-		ty = this->mlValueTy;
-	    }
-	    auto phi = this->_builder.CreatePHI(ty, 0);
+	    auto phi = this->_builder.CreatePHI(this->ptrTy, 0);
 	    this->_overflowPhiNodes.push_back(phi);
 	    args.push_back(phi);
 	}
