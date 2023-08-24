@@ -17,6 +17,7 @@
 #       -debug          -- build a debug release of LLVM (WARNING: debug releases take
 #                          much longer to build and are signficantly slower than the
 #                          default release builds)
+#       -ninja          -- generate build.ninja files (instead of Unix makefiles)
 #
 
 usage() {
@@ -27,12 +28,14 @@ usage() {
   echo "                  that are known to SML/NJ"
   echo "    -build-cfgc   build the cfgc (CFG compiler) tool."
   echo "    -debug        build a debug version of the LLVM libraries"
+  echo "    -ninja        generate build.ninja files (instead of Unix makefiles)"
   exit $1
 }
 
 LLVM_BUILD_TYPE=Release
 USE_GOLD_LD=no
 NPROCS=2
+GENERATOR="Unix Makefiles"
 
 # the install location should be specified as the environment variable RUNTIMEDIR
 #
@@ -46,7 +49,14 @@ fi
 #
 case `uname -s` in
   Darwin)
-    NPROCS=$(sysctl -n hw.physicalcpu)
+    case `uname -p` in
+      arm) # on arm processors, we only use the performance cores
+        NPROCS=$(sysctl -n hw.perflevel0.physicalcpu)
+        ;;
+      *) # otherwise use the physical core count
+        NPROCS=$(sysctl -n hw.physicalcpu)
+        ;;
+    esac
   ;;
   Linux)
     USE_GOLD_LD=yes
@@ -92,6 +102,9 @@ while [ "$#" != "0" ] ; do
     -debug)
       LLVM_BUILD_TYPE=Debug
       ;;
+    -ninja)
+      GENERATOR="Ninja"
+      ;;
     *)
       echo "build-llvm.sh: invalid option '$arg'"
       usage 1
@@ -136,12 +149,12 @@ mkdir build
 cd build
 
 echo "build-llvm.sh: configuring build"
-echo "  cmake --preset=$PRESET $CMAKE_DEFS ../src"
-cmake --preset=$PRESET $CMAKE_DEFS ../llvm || exit 1
+echo "  cmake --preset=$PRESET -G \"$GENERATOR\" $CMAKE_DEFS ../src"
+cmake --preset=$PRESET -G "$GENERATOR" $CMAKE_DEFS ../llvm || exit 1
 
 echo "build-llvm.sh: building on $NPROCS cores"
-echo "  make -j $NPROCS install"
-time make -j $NPROCS install
+echo "  cmake --build . -j $NPROCS -t install"
+time cmake --build . -j $NPROCS -t install
 
 # if requested, build the CFG compiler
 #
