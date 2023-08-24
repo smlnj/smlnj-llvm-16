@@ -61,8 +61,8 @@ case `uname -s` in
   Linux)
     USE_GOLD_LD=yes
     if [ -x /bin/nproc ] ; then
-      # NPROCS reports the number of hardware threads, which is usually twice the number of
-      # actual cores, so we will divide by two.
+      # NPROCS reports the number of hardware threads, which is usually twice the
+      # number of actual cores, so we will divide by two.
       NPROCS=$(/bin/nproc --all)
       if [ $NPROCS -gt 4 ] ; then
          NPROCS=$(($NPROCS / 2))
